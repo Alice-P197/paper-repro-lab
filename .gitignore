@@ -11,3 +11,6 @@ pkg_build/
 # 系统
 Thumbs.db
 .DS_Store
+
+# 截图临时文件
+_*.png
