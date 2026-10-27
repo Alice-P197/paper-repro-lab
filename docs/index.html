@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="no-js">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>论文复现实验室 · Paper Repro Lab</title>
+<meta name="description" content="顶刊论文的可下载复现结果：光学生成模型（Nature 2025）完整 MATLAB 源码、已训练模型、结果图与复现报告，纯 CPU 可复现。" />
+<meta property="og:title" content="论文复现实验室 · 光学生成模型已复现" />
+<meta property="og:description" content="下载 Nature 2025《Optical generative models》的完整 MATLAB 复现：源码 / 已训练模型 / 结果图 / 报告。" />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307090f'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%233ad7ff' stroke-width='2.5'/%3E%3Ccircle cx='32' cy='32' r='9' fill='none' stroke='%238b6cff' stroke-width='2.5'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%233ef0c0'/%3E%3C/svg%3E" />
+<style>
+  /* ============ tokens ============ */
+  :root{
+    --bg:#04060b;
+    --bg-2:#070b13;
+    --text:#e9eef7;
+    --dim:#93a1b8;
+    --dim-2:#66748c;
+    --cyan:#3ad7ff;
+    --violet:#8b6cff;
+    --mint:#3ef0c0;
+    --amber:#ffc86b;
+    --line:rgba(255,255,255,.085);
+    --line-2:rgba(255,255,255,.16);
+    --glass:rgba(255,255,255,.042);
+    --glass-2:rgba(255,255,255,.065);
+    --shadow:0 24px 70px -30px rgba(0,0,0,.9);
+    --r-lg:22px;
+    --r-md:14px;
+    --max:1180px;
+    --mono:ui-monospace,"SFMono-Regular","JetBrains Mono","Cascadia Code",Consolas,"Liberation Mono",monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.65;overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%;display:block}
+  ::selection{background:rgba(58,215,255,.28)}
+  /* scrollbar */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:#05080e}
+  ::-webkit-scrollbar-thumb{background:#1b2434;border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:#27344a}
+
+  /* ============ background layers ============ */
+  #field{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.85}
+  .bg-grid{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+    background-size:64px 64px;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 15%,transparent 78%);
+    -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 15%,transparent 78%);
+  }
+  .bg-aurora{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .bg-aurora i{position:absolute;display:block;border-radius:50%;filter:blur(90px);opacity:.5}
+  .bg-aurora i:nth-child(1){width:620px;height:620px;left:-8%;top:-16%;background:radial-gradient(circle,rgba(58,215,255,.42),transparent 66%)}
+  .bg-aurora i:nth-child(2){width:560px;height:560px;right:-10%;top:6%;background:radial-gradient(circle,rgba(139,108,255,.38),transparent 66%)}
+  .bg-aurora i:nth-child(3){width:520px;height:520px;left:34%;top:46%;background:radial-gradient(circle,rgba(62,240,192,.16),transparent 68%)}
+  #spot{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(340px circle at var(--mx,50%) var(--my,20%),rgba(58,215,255,.10),transparent 70%);
+    transition:background .12s linear;
+  }
+  .grain{
+    position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{position:relative;z-index:2}
+
+  /* ============ nav ============ */
+  header{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+    background:rgba(4,6,11,.62);border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .nav{max-width:var(--max);margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:26px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:.01em}
+  .brand .mark{
+    width:30px;height:30px;border-radius:9px;flex:none;position:relative;
+    background:conic-gradient(from 200deg,rgba(58,215,255,.9),rgba(139,108,255,.9),rgba(62,240,192,.9),rgba(58,215,255,.9));
+    box-shadow:0 0 22px -4px rgba(58,215,255,.65);
+  }
+  .brand .mark::after{content:"";position:absolute;inset:7px;border-radius:5px;background:#05070c}
+  .brand b{font-size:15px}
+  .brand span{font-size:11px;color:var(--dim-2);letter-spacing:.22em;font-family:var(--mono);margin-top:-2px}
+  .nav-links{display:flex;gap:22px;margin-left:auto;font-size:13.5px;color:var(--dim)}
+  .nav-links a{position:relative;padding:4px 0;transition:color .2s}
+  .nav-links a::after{content:"";position:absolute;left:0;right:100%;bottom:0;height:1.5px;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:right .28s ease}
+  .nav-links a:hover{color:#fff}
+  .nav-links a:hover::after{right:0}
+  .nav-gh{
+    display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:10px;
+    border:1px solid var(--line-2);background:var(--glass);font-size:13px;color:var(--text);transition:.22s;
+  }
+  .nav-gh:hover{background:var(--glass-2);border-color:rgba(58,215,255,.5);transform:translateY(-1px)}
+  @media(max-width:820px){.nav-links{display:none}}
+
+  /* ============ hero ============ */
+  .hero{max-width:var(--max);margin:0 auto;padding:88px 24px 40px}
+  .chip{
+    display:inline-flex;align-items:center;gap:9px;padding:6px 13px 6px 10px;border-radius:999px;
+    border:1px solid rgba(62,240,192,.28);background:rgba(62,240,192,.07);
+    font-size:12.5px;color:#a9f7e2;font-family:var(--mono);letter-spacing:.02em;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(62,240,192,.6);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(62,240,192,.55)}70%{box-shadow:0 0 0 9px rgba(62,240,192,0)}100%{box-shadow:0 0 0 0 rgba(62,240,192,0)}}
+  h1{
+    font-size:clamp(36px,6.1vw,76px);line-height:1.06;letter-spacing:-.03em;font-weight:800;
+    margin:24px 0 0;max-width:16em;
+    background:linear-gradient(96deg,#ffffff 4%,#a8dcff 42%,#c9b8ff 72%,#8ef3d4 96%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  h1 em{font-style:normal;position:relative;white-space:nowrap}
+  h1 em::after{
+    content:"";position:absolute;left:0;right:0;bottom:.06em;height:.34em;border-radius:3px;
+    background:linear-gradient(90deg,rgba(58,215,255,.24),rgba(139,108,255,.20));z-index:-1;
+  }
+  .lede{margin:26px 0 0;max-width:44em;font-size:clamp(15px,1.55vw,17.5px);color:var(--dim);line-height:1.85}
+  .lede strong{color:#dfe9f7;font-weight:600}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+  .btn{
+    display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:12px;font-size:14.5px;font-weight:650;
+    border:1px solid transparent;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.3,1),box-shadow .25s,background .25s,border-color .25s;
+    font-family:inherit;
+  }
+  .btn svg{width:17px;height:17px;flex:none}
+  .btn-primary{
+    background:linear-gradient(100deg,#37c8ff,#6f8bff 52%,#9b6dff);color:#04121b;
+    box-shadow:0 14px 40px -14px rgba(76,150,255,.85),inset 0 1px 0 rgba(255,255,255,.5);
+    text-shadow:0 1px 0 rgba(255,255,255,.25);
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 20px 52px -14px rgba(76,150,255,.95),inset 0 1px 0 rgba(255,255,255,.6)}
+  .btn-ghost{border-color:var(--line-2);background:var(--glass);color:var(--text)}
+  .btn-ghost:hover{background:var(--glass-2);border-color:rgba(58,215,255,.45);transform:translateY(-2px)}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:26px;font-size:12.5px;color:var(--dim-2);font-family:var(--mono)}
+  .hero-meta span{display:inline-flex;align-items:center;gap:6px}
+  .hero-meta i{width:4px;height:4px;border-radius:50%;background:var(--dim-2);display:inline-block}
+
+  /* ============ stats ============ */
+  .stats{
+    max-width:var(--max);margin:44px auto 0;padding:0 24px;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .stat{background:rgba(4,6,11,.55);padding:26px 20px}
+  .stat b{display:block;font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-.02em;
+    background:linear-gradient(180deg,#fff,#9fd0f5);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat span{display:block;margin-top:6px;font-size:12.5px;color:var(--dim-2);letter-spacing:.02em}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+  /* ============ section shell ============ */
+  section{max-width:var(--max);margin:0 auto;padding:96px 24px 0}
+  .sec-head{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:30px}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.26em;color:var(--cyan);text-transform:uppercase;opacity:.85}
+  h2{font-size:clamp(24px,3.1vw,34px);letter-spacing:-.02em;margin:9px 0 0;font-weight:750}
+  .sec-head p{margin:0;color:var(--dim);font-size:14.5px;max-width:34em}
+  .sec-head .right{margin-left:auto;display:flex;gap:10px}
+
+  /* ============ release panel ============ */
+  .release{
+    display:grid;grid-template-columns:1.15fr .85fr;gap:0;border:1px solid var(--line);
+    border-radius:var(--r-lg);overflow:hidden;background:
+      linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+    box-shadow:var(--shadow);position:relative;
+  }
+  .release::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:radial-gradient(600px circle at var(--rx,20%) var(--ry,0%),rgba(58,215,255,.13),transparent 62%);
+    opacity:0;transition:opacity .4s;
+  }
+  .release:hover::before{opacity:1}
+  .release-main{padding:34px 34px 30px;border-right:1px solid var(--line)}
+  .rel-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px}
+  .tag{padding:4px 9px;border-radius:7px;background:rgba(62,240,192,.13);color:#9df3d8;border:1px solid rgba(62,240,192,.26)}
+  .tag.ver{background:rgba(58,215,255,.12);color:#a7e6ff;border-color:rgba(58,215,255,.26)}
+  .rel-date{color:var(--dim-2)}
+  .release h3{margin:16px 0 8px;font-size:clamp(19px,2.2vw,24px);letter-spacing:-.01em;font-weight:700;line-height:1.35}
+  .release .desc{color:var(--dim);font-size:14px;margin:0 0 20px}
+  .manifest{list-style:none;margin:0;padding:0;display:grid;gap:9px;font-size:13.5px}
+  .manifest li{display:flex;align-items:flex-start;gap:9px;color:#c8d4e6}
+  .manifest .ck{
+    width:16px;height:16px;flex:none;margin-top:3px;border-radius:5px;
+    background:rgba(62,240,192,.15);border:1px solid rgba(62,240,192,.35);
+    display:grid;place-items:center;color:#7cf0cd;font-size:10px;font-weight:800;
+  }
+  .release-side{padding:30px;display:flex;flex-direction:column;gap:14px;justify-content:center;background:rgba(0,0,0,.18)}
+  .filecard{
+    border:1px solid var(--line);border-radius:var(--r-md);padding:16px 16px 14px;background:var(--glass);
+    transition:.25s;position:relative;overflow:hidden;
+  }
+  .filecard:hover{border-color:rgba(58,215,255,.38);background:var(--glass-2);transform:translateY(-2px)}
+  .filecard .ft{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim-2);font-family:var(--mono)}
+  .filecard .fn{font-family:var(--mono);font-size:12.8px;color:#dce7f7;margin:8px 0 12px;word-break:break-all}
+  .filecard .row{display:flex;align-items:center;gap:8px}
+  .filecard .size{font-size:11.5px;color:var(--dim-2);font-family:var(--mono);margin-left:auto}
+  .mini{
+    display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;font-size:12.5px;font-weight:600;
+    background:rgba(58,215,255,.1);color:#a9e8ff;border:1px solid rgba(58,215,255,.26);transition:.2s;cursor:pointer;font-family:inherit;
+  }
+  .mini:hover{background:rgba(58,215,255,.2);border-color:rgba(58,215,255,.5)}
+  .mini.alt{background:var(--glass-2);color:var(--text);border-color:var(--line-2)}
+  .mini.alt:hover{background:rgba(255,255,255,.1)}
+  @media(max-width:900px){.release{grid-template-columns:1fr}.release-main{border-right:0;border-bottom:1px solid var(--line)}}
+
+  /* ============ gallery ============ */
+  .gal{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .gitem{
+    position:relative;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);
+    background:#0a0f18;cursor:zoom-in;isolation:isolate;
+  }
+  .gitem img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.2,.8,.3,1),filter .4s;filter:saturate(.95) contrast(1.03)}
+  .gitem:hover img{transform:scale(1.045);filter:saturate(1.05) contrast(1.06)}
+  .gitem figcaption{
+    position:absolute;left:0;right:0;bottom:0;padding:26px 14px 12px;font-size:12.5px;color:#e6eefb;
+    background:linear-gradient(transparent,rgba(3,6,12,.92));opacity:0;transform:translateY(8px);transition:.3s;
+  }
+  .gitem:hover figcaption{opacity:1;transform:none}
+  .gitem .badge{
+    position:absolute;top:10px;left:10px;padding:3px 8px;border-radius:6px;font-size:10.5px;font-family:var(--mono);
+    background:rgba(4,6,11,.72);border:1px solid var(--line-2);color:#bcd0e8;backdrop-filter:blur(6px);
+  }
+  .g-a{grid-column:span 2;grid-row:span 2;min-height:330px}
+  .g-b{grid-column:span 2;min-height:158px}
+  .g-c{min-height:158px}
+  .g-d{min-height:158px}
+  @media(max-width:820px){
+    .gal{grid-template-columns:repeat(2,1fr)}
+    .g-a{grid-column:span 2;grid-row:auto;min-height:210px}
+    .g-b{grid-column:span 2}
+  }
+
+  /* ============ method steps ============ */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .step{
+    position:relative;padding:26px 24px;border-radius:var(--r-lg);border:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));overflow:hidden;
+    transition:.3s;
+  }
+  .step:hover{border-color:rgba(139,108,255,.4);transform:translateY(-3px)}
+  .step .n{
+    font-family:var(--mono);font-size:52px;font-weight:800;line-height:1;letter-spacing:-.04em;
+    background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.03));
+    -webkit-background-clip:text;background-clip:text;color:transparent;position:absolute;right:18px;top:12px;
+  }
+  .step h4{margin:0 0 10px;font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+  .step p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.8}
+  .step code{font-family:var(--mono);font-size:12px;color:#9fe4ff;background:rgba(58,215,255,.09);padding:1.5px 6px;border-radius:5px}
+  @media(max-width:820px){.steps{grid-template-columns:1fr}}
+
+  /* ============ terminal ============ */
+  .term{
+    border-radius:var(--r-lg);border:1px solid var(--line);overflow:hidden;background:#05080f;
+    box-shadow:var(--shadow);
+  }
+  .term-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.028)}
+  .term-bar i{width:10px;height:10px;border-radius:50%;display:block}
+  .term-bar i:nth-child(1){background:#ff5f57}.term-bar i:nth-child(2){background:#febc2e}.term-bar i:nth-child(3){background:#28c840}
+  .term-bar span{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--dim-2)}
+  .term-bar .copy{margin-left:auto}
+  .term pre{
+    margin:0;padding:22px 22px 24px;font-family:var(--mono);font-size:13.2px;line-height:2;overflow-x:auto;color:#c8d6ea;
+  }
+  .term .c{color:#5f7186}
+  .term .p{color:var(--mint);user-select:none}
+  .term .k{color:#ffd08a}
+  .term .s{color:#9fe4ff}
+
+  /* ============ planned cards ============ */
+  .planned{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .plan{
+    border:1px dashed rgba(255,255,255,.14);border-radius:var(--r-lg);padding:26px 24px;min-height:158px;
+    display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,.014);transition:.3s;
+  }
+  .plan:hover{border-color:rgba(58,215,255,.34);background:rgba(58,215,255,.03)}
+  .plan .lb{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--dim-2)}
+  .plan h4{margin:2px 0 0;font-size:15px;font-weight:650;color:#cfdcee}
+  .plan p{margin:0;font-size:12.8px;color:var(--dim-2);line-height:1.7}
+  @media(max-width:820px){.planned{grid-template-columns:1fr}}
+
+  /* ============ footer ============ */
+  footer{max-width:var(--max);margin:0 auto;padding:80px 24px 60px;position:relative;z-index:2}
+  .foot-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:30px;border-top:1px solid var(--line);padding-top:38px}
+  .bib{
+    font-family:var(--mono);font-size:11.8px;line-height:1.95;color:var(--dim);
+    background:rgba(255,255,255,.028);border:1px solid var(--line);border-radius:var(--r-md);padding:18px 20px;
+    white-space:pre-wrap;word-break:break-word;position:relative;
+  }
+  .bib .copy{position:absolute;top:12px;right:12px}
+  .foot-note{font-size:12.3px;color:var(--dim-2);line-height:1.9}
+  .foot-note b{color:var(--dim);font-weight:600}
+  .foot-bottom{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:34px;font-size:12px;color:var(--dim-2);font-family:var(--mono)}
+
+  /* ============ lightbox ============ */
+  .lb{
+    position:fixed;inset:0;z-index:100;display:none;place-items:center;padding:40px;
+    background:rgba(2,4,8,.9);backdrop-filter:blur(14px);
+  }
+  .lb.on{display:grid;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .lb img{max-width:min(1200px,92vw);max-height:84vh;border-radius:12px;border:1px solid var(--line-2);box-shadow:0 40px 90px -30px #000}
+  .lb .cap{margin-top:14px;font-size:13px;color:var(--dim);text-align:center}
+  .lb .x{position:absolute;top:22px;right:26px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line-2);background:rgba(255,255,255,.06);color:#fff;font-size:20px;cursor:pointer;display:grid;place-items:center}
+
+  /* ============ toast ============ */
+  .toast{
+    position:fixed;left:50%;bottom:34px;transform:translate(-50%,20px);z-index:120;
+    padding:11px 20px;border-radius:11px;font-size:13.5px;color:#04121b;font-weight:650;
+    background:linear-gradient(100deg,#5fe0ff,#8fd6a0);box-shadow:0 16px 40px -14px rgba(0,0,0,.8);
+    opacity:0;pointer-events:none;transition:.28s cubic-bezier(.2,.8,.3,1);
+  }
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* ============ reveal ============ */
+  .js .rv{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.8,.3,1),transform .7s cubic-bezier(.2,.8,.3,1)}
+  .js .rv.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    .js .rv{opacity:1;transform:none;transition:none}
+    #field{display:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="field"></canvas>
+<div class="bg-grid"></div>
+<div class="bg-aurora"><i></i><i></i><i></i></div>
+<div id="spot"></div>
+<div class="grain"></div>
+
+<div class="wrap">
+<header>
+  <nav class="nav">
+    <a class="brand" href="#top">
+      <span class="mark"></span>
+      <span>
+        <b>论文复现实验室</b><br />
+        <span>PAPER&nbsp;REPRO&nbsp;LAB</span>
+      </span>
+    </a>
+    <div class="nav-links">
+      <a href="#download">资源下载</a>
+      <a href="#gallery">复现成果</a>
+      <a href="#method">复现方法</a>
+      <a href="#start">快速上手</a>
+    </div>
+    <a class="nav-gh" href="https://github.com/Alice-P197/paper-repro-lab" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      GitHub
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+  <!-- ================= HERO ================= -->
+  <div class="hero">
+    <span class="chip"><span class="dot"></span>NATURE 644 · 2025 · 已复现</span>
+    <h1>让顶刊的生成模型<br />在<em>你自己的机器</em>上跑起来</h1>
+    <p class="lede">
+      把论文里的物理链路、训练方法与生成结果，整理成<strong>可直接运行的源码、已训练模型、结果图和复现报告</strong>。
+      第一个收录项目是 Nature 2025《Optical generative models》——用一束光代替 GPU 做生成，本复现全程 <strong>纯 CPU</strong> 完成，
+      MNIST / Fashion-MNIST 十个类别全部条件生成成功。
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" id="dlMain" href="https://github.com/Alice-P197/paper-repro-lab/releases/latest" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        下载资源包 <span style="opacity:.72;font-weight:500">v1.0.0 · 6.5 MB</span>
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/Alice-P197/paper-repro-lab" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        查看源码
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/Alice-P197/paper-repro-lab/blob/main/reproductions/optical-generative-models/report/reproduction_report_cn.pdf" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6"/><path d="M9 11h3"/></svg>
+        复现报告 PDF
+      </a>
+    </div>
+    <div class="hero-meta">
+      <span><i></i>MATLAB R2021b+</span>
+      <span><i></i>Deep Learning Toolbox</span>
+      <span><i></i>无需 GPU</span>
+      <span><i></i>MIT License</span>
+      <span><i></i>更新于 2026-10-27</span>
+    </div>
+  </div>
+
+  <!-- ================= STATS ================= -->
+  <div class="stats rv">
+    <div class="stat"><b data-count="1" data-suffix="">0</b><span>已收录论文复现</span></div>
+    <div class="stat"><b data-count="0.0082" data-dec="4" data-prefix="MSE ">0</b><span>相位种子平均拟合误差</span></div>
+    <div class="stat"><b data-count="10" data-suffix=" / 10">0</b><span>类别条件生成覆盖</span></div>
+    <div class="stat"><b data-count="6.5" data-dec="1" data-suffix=" MB">0</b><span>资源包体积（免训练可跑）</span></div>
+  </div>
+
+  <!-- ================= DOWNLOAD ================= -->
+  <section id="download">
+    <div class="sec-head rv">
+      <div>
+        <div class="kicker">01 — Download</div>
+        <h2>资源下载</h2>
+      </div>
+      <p>压缩包内含全部源码、已训练模型与结果图，解压后按「使用说明」即可复现；也可直接克隆仓库，按目录取用。</p>
+    </div>
+
+    <div class="release rv" id="relPanel">
+      <div class="release-main">
+        <div class="rel-top">
+          <span class="tag">Latest Release</span>
+          <span class="tag ver">v1.0.0</span>
+          <span class="rel-date">2026-10-27 · 6.5 MB</span>
+        </div>
+        <h3>光学生成模型 MATLAB 复现包<br /><span style="font-size:.72em;color:var(--dim);font-weight:500">Optical Generative Models · Nature 644, 903–911 (2025)</span></h3>
+        <p class="desc">纯 CPU 复现快照光学生成模型：相位种子 → 角谱传播 → 衍射解码层 → 传感器成像，MNIST / Fashion-MNIST 十个类别全部条件生成成功。</p>
+        <ul class="manifest">
+          <li><span class="ck">✓</span>全部 MATLAB 源码（可微角谱传播 / 原型拟合 / 场混合生成 / 编码器蒸馏）</li>
+          <li><span class="ck">✓</span>已训练模型 <code style="font-family:var(--mono);font-size:12px;color:#9fe4ff">prototypes_mnist.mat / prototypes_fashion.mat</code>，免训练直接出图</li>
+          <li><span class="ck">✓</span>精选结果图 10 张 + 论文原图对照 + 真实样本对比</li>
+          <li><span class="ck">✓</span>复现报告 PDF（原理 / 方法 / 结果 / 与论文差异声明）</li>
+          <li><span class="ck">✓</span>训练日志与「使用说明」，含数据集一键下载脚本</li>
+        </ul>
+      </div>
+      <div class="release-side">
+        <div class="filecard">
+          <div class="ft">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2Z"/></svg>
+            ZIP · 完整资源包
+          </div>
+          <div class="fn">光学生成模型复现包_20261027.zip</div>
+          <div class="row">
+            <a class="mini" href="https://github.com/Alice-P197/paper-repro-lab/releases/latest" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              前往下载
+            </a>
+            <button class="mini alt" data-copy="https://github.com/Alice-P197/paper-repro-lab/releases/latest">复制直链</button>
+            <span class="size">6.5 MB</span>
+          </div>
+        </div>
+        <div class="filecard">
+          <div class="ft">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+            GIT CLONE · 源码仓库
+          </div>
+          <div class="fn">git clone .../paper-repro-lab.git</div>
+          <div class="row">
+            <a class="mini alt" href="https://github.com/Alice-P197/paper-repro-lab" target="_blank" rel="noopener">打开仓库</a>
+            <button class="mini alt" data-copy="git clone https://github.com/Alice-P197/paper-repro-lab.git">复制命令</button>
+            <span class="size">≈ 5 MB</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= GALLERY ================= -->
+  <section id="gallery">
+    <div class="sec-head rv">
+      <div>
+        <div class="kicker">02 — Results</div>
+        <h2>复现成果</h2>
+      </div>
+      <p>点击任意图片查看大图。左侧为论文原图，其余为本复现输出。</p>
+    </div>
+
+    <div class="gal rv">
+      <figure class="gitem g-a" data-full="assets/img/cover-mnist.jpg">
+        <img src="assets/img/cover-mnist.jpg" alt="光学生成 MNIST 十类结果" loading="lazy" />
+        <span class="badge">本复现 · MNIST 10 类 × 8 样本</span>
+        <figcaption>光学生成的手写数字：每行一个类别，样本间笔画自然变化</figcaption>
+      </figure>
+      <figure class="gitem g-b" data-full="assets/img/cover-fashion.jpg">
+        <img src="assets/img/cover-fashion.jpg" alt="光学生成 Fashion-MNIST 十类结果" loading="lazy" />
+        <span class="badge">本复现 · Fashion 10 类</span>
+        <figcaption>T恤 / 裤 / 套衫 / 连衣裙 / 外套 / 凉鞋 / 衬衫 / 运动鞋 / 包 / 靴</figcaption>
+      </figure>
+      <figure class="gitem g-c" data-full="assets/img/cmp-mnist.jpg">
+        <img src="assets/img/cmp-mnist.jpg" alt="真实样本与光学生成对比" loading="lazy" />
+        <span class="badge">对比</span>
+        <figcaption>黄框为真实样本，其余为光学输出</figcaption>
+      </figure>
+      <figure class="gitem g-d" data-full="assets/img/paper-fig1.jpg">
+        <img src="assets/img/paper-fig1.jpg" alt="论文 Fig.1 设计与训练流程" loading="lazy" />
+        <span class="badge">论文 Fig. 1</span>
+        <figcaption>论文原图：设计 / 训练 / 盲推理</figcaption>
+      </figure>
+      <figure class="gitem" data-full="assets/img/paper-fig3a.jpg">
+        <img src="assets/img/paper-fig3a.jpg" alt="论文 Fig.3 实验装置" loading="lazy" />
+        <span class="badge">论文 Fig. 3a</span>
+        <figcaption>实验装置实物与光路</figcaption>
+      </figure>
+      <figure class="gitem" data-full="assets/img/paper-fig4.jpg">
+        <img src="assets/img/paper-fig4.jpg" alt="论文 Fig.4 梵高迭代式生成" loading="lazy" />
+        <span class="badge">论文 Fig. 4</span>
+        <figcaption>迭代式生成（本次未复现，需 5 层解码器 + DDPM）</figcaption>
+      </figure>
+      <figure class="gitem" data-full="assets/img/proto-mnist.jpg">
+        <img src="assets/img/proto-mnist.jpg" alt="目标图像与光学拟合对比" loading="lazy" />
+        <span class="badge">拟合 MSE 0.0082</span>
+        <figcaption>目标图像 vs 光学拟合结果</figcaption>
+      </figure>
+      <figure class="gitem" data-full="assets/img/loss-mnist.jpg">
+        <img src="assets/img/loss-mnist.jpg" alt="训练收敛曲线" loading="lazy" />
+        <span class="badge">训练曲线</span>
+        <figcaption>两阶段优化收敛过程</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= METHOD ================= -->
+  <section id="method">
+    <div class="sec-head rv">
+      <div>
+        <div class="kicker">03 — Method</div>
+        <h2>复现方法</h2>
+      </div>
+      <p>论文在数据中心 GPU 上端到端训练。本复现改用可在 CPU 上收敛的三步分解策略，最终系统的物理结构与论文一致。</p>
+    </div>
+    <div class="steps rv">
+      <div class="step">
+        <span class="n">01</span>
+        <h4>可微物理链路</h4>
+        <p>用 <code>dlarray</code> 实现可微角谱传播，梯度从传感器强度回传到 SLM 相位；SLM 区域外复数场置零（暗孔径），避免固定背景光淹没信号。</p>
+      </div>
+      <div class="step">
+        <span class="n">02</span>
+        <h4>原型拟合</h4>
+        <p>每类 5 个相位种子 + 共享衍射解码层，以逐任务流方式拟合「类均值 + 真实样本」混合目标，再冻结解码层抛光，平均 MSE <code>0.008</code>。</p>
+      </div>
+      <div class="step">
+        <span class="n">03</span>
+        <h4>场空间混合生成</h4>
+        <p>类内种子做复数域随机凸组合（物理上＝多张相位图样叠加），取合成场相位再走一遍光学前向，即可无限采样新的类别样本。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= START ================= -->
+  <section id="start">
+    <div class="sec-head rv">
+      <div>
+        <div class="kicker">04 — Quick Start</div>
+        <h2>四行命令上手</h2>
+      </div>
+      <p>已训练模型随仓库提供，无需重训即可生成结果图；完整重训见仓库 README。</p>
+    </div>
+    <div class="term rv">
+      <div class="term-bar">
+        <i></i><i></i><i></i><span>bash · paper-repro-lab</span>
+        <button class="mini alt copy" data-copy="git clone https://github.com/Alice-P197/paper-repro-lab.git
+cd paper-repro-lab/reproductions/optical-generative-models/matlab
+matlab -batch &quot;download_data('mnist')&quot;
+matlab -batch &quot;quickstart&quot;">复制全部</button>
+      </div>
+<pre><span class="c"># 1. 取代码</span>
+<span class="p">$</span> git clone https://github.com/Alice-P197/paper-repro-lab.git
+<span class="p">$</span> <span class="k">cd</span> paper-repro-lab/reproductions/optical-generative-models/matlab
+
+<span class="c"># 2. 下载数据集（约 12 MB，自动解压）</span>
+<span class="p">$</span> matlab -batch <span class="s">"download_data('mnist')"</span>
+
+<span class="c"># 3. 免训练直接生成 —— 读入已训练模型，输出 10 类 × 8 样本</span>
+<span class="p">$</span> matlab -batch <span class="s">"quickstart"</span>
+
+<span class="c"># 4.（可选）从零重训：每个数据集约 18 分钟（纯 CPU）</span>
+<span class="p">$</span> matlab -batch <span class="s">"setenv('OGEN_DATASET','mnist'); train_prototypes"</span></pre>
+    </div>
+  </section>
+
+  <!-- ================= ROADMAP ================= -->
+  <section id="roadmap">
+    <div class="sec-head rv">
+      <div>
+        <div class="kicker">05 — Roadmap</div>
+        <h2>下一个复现</h2>
+      </div>
+      <p>本页是长期复现档案库：每完成一篇论文，就在下方新增一张卡片与一个 Release，下载入口始终是这两个位置。</p>
+    </div>
+    <div class="planned rv" id="plannedList">
+      <!-- 由下方 REPRODUCTIONS 数据渲染（status: planned） -->
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer>
+    <div class="foot-grid">
+      <div>
+        <div class="kicker" style="margin-bottom:12px">Citation</div>
+        <div class="bib" id="bibText">@article{chen2025optical,
+  title   = {Optical generative models},
+  author  = {Chen, Shaowei and Li, Yuhang and Wang, Yide and Chen, Hong and Ozcan, Aydogan},
+  journal = {Nature},
+  volume  = {644},
+  pages   = {903--911},
+  year    = {2025}
+}<button class="mini alt copy" data-copy-el="bibText">复制</button></div>
+      </div>
+      <div>
+        <div class="kicker" style="margin-bottom:12px">Notes</div>
+        <p class="foot-note">
+          <b>代码许可</b>：MIT，可自由使用与修改。<br />
+          <b>论文图片</b>：版权归原作者与出版方所有，此处仅用于学术交流与结果对照。<br />
+          <b>复现声明</b>：训练程序与生成机制已按 CPU 条件调整，与论文的差异在仓库 README 与报告中逐条列出，未复现部分不作夸大表述。
+        </p>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 PAPER REPRO LAB · Built for reproducibility</span>
+      <span>光学生成模型 / Optical Generative Models</span>
+    </div>
+  </footer>
+</main>
+</div>
+
+<div class="lb" id="lightbox">
+  <button class="x" id="lbClose">×</button>
+  <div>
+    <img id="lbImg" alt="" />
+    <div class="cap" id="lbCap"></div>
+  </div>
+</div>
+<div class="toast" id="toast">已复制</div>
+
+<script>
+/* =========================================================
+   项目数据：以后新增复现，只需往数组里加一条对象
+   status: 'released' | 'planned'
+   ========================================================= */
+const REPRODUCTIONS = [
+  {
+    id: 'optical-generative-models',
+    title: '光学生成模型',
+    paper: 'Nature 644, 903–911 (2025)',
+    status: 'released',
+    version: 'v1.0.0',
+    size: '6.5 MB',
+    date: '2026-10-27',
+    url: 'https://github.com/Alice-P197/paper-repro-lab/releases/latest',
+    note: '纯 CPU 复现，MNIST / Fashion-MNIST 十类条件生成'
+  },
+  {
+    label: 'SLOT 01',
+    title: '待定 · 下一篇论文复现',
+    status: 'planned',
+    note: '结果图、源码、模型与报告将按同一目录规范归档，Release 与下载入口保持不变。'
+  },
+  {
+    label: 'SLOT 02',
+    title: '待定 · 下一篇论文复现',
+    status: 'planned',
+    note: '如需指定主题（光学 / 计算成像 / 扩散模型），可提 Issue 投票。'
+  },
+  {
+    label: 'SLOT 03',
+    title: '待定 · 下一篇论文复现',
+    status: 'planned',
+    note: '每个项目都会给出「复现了什么 / 没复现什么」的诚实清单。'
+  }
+];
+
+/* ---- 渲染 roadmap ---- */
+(function renderPlanned(){
+  const box = document.getElementById('plannedList');
+  if(!box) return;
+  box.innerHTML = REPRODUCTIONS.filter(r => r.status === 'planned').map((r,i) => `
+    <div class="plan">
+      <span class="lb">${r.label || ('SLOT ' + String(i+1).padStart(2,'0'))}</span>
+      <h4>${r.title}</h4>
+      <p>${r.note}</p>
+    </div>`).join('');
+})();
+
+/* ---- 滚动渐入 ---- */
+document.documentElement.classList.remove('no-js');
+document.documentElement.classList.add('js');
+(function reveal(){
+  const els = document.querySelectorAll('.rv');
+  if(!('IntersectionObserver' in window)){ els.forEach(e=>e.classList.add('in')); return; }
+  const io = new IntersectionObserver((ents)=>{
+    ents.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:.12, rootMargin:'0px 0px -8% 0px'});
+  els.forEach((e,i)=>{ e.style.transitionDelay = (Math.min(i,6)*60) + 'ms'; io.observe(e); });
+})();
+
+/* ---- 数字滚动 ---- */
+(function counters(){
+  const nums = document.querySelectorAll('[data-count]');
+  const run = el => {
+    const target = parseFloat(el.dataset.count);
+    const dec = parseInt(el.dataset.dec || '0', 10);
+    const pre = el.dataset.prefix || '';
+    const suf = el.dataset.suffix || '';
+    const dur = 1100, t0 = performance.now();
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      const v = target * e;
+      el.textContent = pre + (dec ? v.toFixed(dec) : Math.round(v)) + suf;
+      if(p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  if(!('IntersectionObserver' in window)){ nums.forEach(run); return; }
+  const io = new IntersectionObserver(es=>{
+    es.forEach(e=>{ if(e.isIntersecting){ run(e.target); io.unobserve(e.target); } });
+  }, {threshold:.6});
+  nums.forEach(n=>io.observe(n));
+})();
+
+/* ---- 指针光斑 ---- */
+(function spotlight(){
+  const s = document.getElementById('spot');
+  if(!s) return;
+  let raf = null, mx = 50, my = 20;
+  addEventListener('pointermove', e=>{
+    mx = (e.clientX / innerWidth) * 100;
+    my = (e.clientY / innerHeight) * 100;
+    if(raf) return;
+    raf = requestAnimationFrame(()=>{
+      s.style.setProperty('--mx', mx + '%');
+      s.style.setProperty('--my', my + '%');
+      raf = null;
+    });
+  }, {passive:true});
+})();
+
+/* ---- release 卡片跟随光斑 ---- */
+(function relGlow(){
+  const p = document.getElementById('relPanel');
+  if(!p) return;
+  p.addEventListener('pointermove', e=>{
+    const r = p.getBoundingClientRect();
+    p.style.setProperty('--rx', ((e.clientX - r.left) / r.width * 100) + '%');
+    p.style.setProperty('--ry', ((e.clientY - r.top) / r.height * 100) + '%');
+  });
+})();
+
+/* ---- 复制 ---- */
+(function copyAll(){
+  const toast = document.getElementById('toast');
+  let tm = null;
+  const show = msg => {
+    toast.textContent = msg || '已复制';
+    toast.classList.add('on');
+    clearTimeout(tm);
+    tm = setTimeout(()=>toast.classList.remove('on'), 1800);
+  };
+  const copy = async txt => {
+    try{
+      await navigator.clipboard.writeText(txt);
+      show('已复制到剪贴板');
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); show('已复制到剪贴板'); }
+      catch(_){ show('复制失败，请手动选择'); }
+      ta.remove();
+    }
+  };
+  document.querySelectorAll('[data-copy]').forEach(b=>{
+    b.addEventListener('click', ()=>copy(b.dataset.copy));
+  });
+  document.querySelectorAll('[data-copy-el]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const el = document.getElementById(b.dataset.copyEl);
+      if(el) copy(el.innerText.replace(/\s*复制\s*$/,'').trim());
+    });
+  });
+})();
+
+/* ---- 图片灯箱 ---- */
+(function lightbox(){
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lbImg');
+  const cap = document.getElementById('lbCap');
+  document.querySelectorAll('.gitem').forEach(f=>{
+    f.addEventListener('click', ()=>{
+      const src = f.dataset.full || f.querySelector('img').src;
+      img.src = src;
+      const c = f.querySelector('figcaption');
+      cap.textContent = c ? c.textContent : '';
+      lb.classList.add('on');
+    });
+  });
+  const close = ()=>{ lb.classList.remove('on'); img.src=''; };
+  document.getElementById('lbClose').addEventListener('click', close);
+  lb.addEventListener('click', e=>{ if(e.target === lb) close(); });
+  addEventListener('keydown', e=>{ if(e.key === 'Escape') close(); });
+})();
+
+/* ---- 背景：双光束干涉环（画布） ---- */
+(function field(){
+  const cv = document.getElementById('field');
+  if(!cv || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0, dpr = 1;
+  const src = [
+    {x:.22, y:.30, c:[58,215,255],  ph:0,   sp:0.34},
+    {x:.76, y:.58, c:[139,108,255], ph:120, sp:0.27},
+    {x:.48, y:.88, c:[62,240,192],  ph:260, sp:0.22}
+  ];
+  let px = .5, py = .5, tx = .5, ty = .5;
+  addEventListener('pointermove', e=>{ tx = e.clientX / innerWidth; ty = e.clientY / innerHeight; }, {passive:true});
+
+  const resize = ()=>{
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = Math.floor(W * dpr);
+    cv.height = Math.floor(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  resize();
+  addEventListener('resize', resize);
+
+  const gap = 92;
+  let t = 0;
+  const draw = ()=>{
+    t += 1;
+    px += (tx - px) * .04; py += (ty - py) * .04;
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+    const diag = Math.hypot(W, H);
+    src.forEach((s, i)=>{
+      const cx = s.x * W + (px - .5) * (60 + i * 26);
+      const cy = s.y * H + (py - .5) * (46 + i * 22);
+      const phase = (t * s.sp + s.ph) % gap;
+      const maxR = diag * .72;
+      for(let r = phase; r < maxR; r += gap){
+        const a = Math.max(0, 1 - r / maxR) * .16;
+        if(a < .006) continue;
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(${s.c[0]},${s.c[1]},${s.c[2]},${a.toFixed(3)})`;
+        ctx.lineWidth = 1.1;
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    });
+    ctx.globalCompositeOperation = 'source-over';
+    requestAnimationFrame(draw);
+  };
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

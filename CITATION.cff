@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+title: Paper Repro Lab — 光学生成模型 MATLAB 复现
+message: >-
+  If you use this reproduction, please cite both the original paper and this repository.
+type: software
+authors:
+  - name: Paper Repro Lab
+repository-code: "https://github.com/Alice-P197/paper-repro-lab"
+url: "https://alice-p197.github.io/paper-repro-lab/"
+license: MIT
+date-released: "2026-10-27"
+preferred-citation:
+  type: article
+  title: "Optical generative models"
+  authors:
+    - family-names: Chen
+      given-names: Shaowei
+    - family-names: Li
+      given-names: Yuhang
+    - family-names: Wang
+      given-names: Yide
+    - family-names: Chen
+      given-names: Hong
+    - family-names: Ozcan
+      given-names: Aydogan
+  journal: Nature
+  volume: 644
+  pages: "903-911"
+  year: 2025
+  doi: "10.1038/s41586-025-09230-z"

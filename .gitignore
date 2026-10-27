@@ -1,0 +1,13 @@
+# 数据与中间产物不入库
+data/
+*.checkpoint.mat
+checkpoint_*.mat
+generation_*.mat
+_tmp/
+*.asv
+*.mex*
+pkg_build/
+
+# 系统
+Thumbs.db
+.DS_Store

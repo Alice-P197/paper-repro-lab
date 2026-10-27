@@ -1,0 +1,10 @@
+Dataset mnist | K=5 seeds/class | 2000 iters
+50 prototype targets (mix=0.50) assigned
+phase A epoch 1 | running loss 0.0449 | 201.6 s
+phase A epoch 2 | running loss 0.0284 | 398.6 s
+phase A epoch 3 | running loss 0.0148 | 596.0 s
+phase B done | mean final loss 0.0082 | max 0.0159 | 1061.7 s
+saved prototypes_mnist.mat
+done
+saved prototypes_mnist.mat
+done

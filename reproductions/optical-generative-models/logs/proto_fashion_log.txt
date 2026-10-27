@@ -1,0 +1,10 @@
+Dataset fashion | K=5 seeds/class | 2000 iters
+50 prototype targets (mix=0.50) assigned
+phase A epoch 1 | running loss 0.0532 | 218.6 s
+phase A epoch 2 | running loss 0.0258 | 422.8 s
+phase A epoch 3 | running loss 0.0136 | 626.7 s
+phase B done | mean final loss 0.0089 | max 0.0175 | 1112.5 s
+saved prototypes_fashion.mat
+done
+saved prototypes_fashion.mat
+done

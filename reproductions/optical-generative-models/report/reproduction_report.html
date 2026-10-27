@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>快照光学生成模型 MATLAB 复现报告</title>
+<style>
+body { font-family: "Microsoft YaHei", "SimSun", sans-serif; margin: 36px 44px; color: #1a1a1a; line-height: 1.65; font-size: 14.5px; }
+h1 { font-size: 24px; border-bottom: 3px solid #1a4d8f; padding-bottom: 10px; color: #1a4d8f; }
+h2 { font-size: 18px; color: #1a4d8f; margin-top: 30px; border-left: 5px solid #1a4d8f; padding-left: 10px; }
+h3 { font-size: 15px; margin-top: 20px; color: #333; }
+.subtitle { color: #555; font-size: 14px; margin-top: -6px; }
+.meta { background: #f0f4fa; border: 1px solid #c9d8ee; border-radius: 6px; padding: 10px 14px; font-size: 13px; margin: 14px 0; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+th { background: #1a4d8f; color: #fff; padding: 7px 9px; text-align: left; }
+td { border: 1px solid #ccd5e0; padding: 6px 9px; vertical-align: top; }
+tr:nth-child(even) td { background: #f6f8fb; }
+img { display: block; margin: 14px auto; border: 1px solid #ddd; max-width: 100%; }
+.figcap { text-align: justify; font-size: 12.5px; color: #444; margin: 4px auto 18px; max-width: 92%; }
+code { background: #eef1f5; padding: 1px 5px; border-radius: 3px; font-size: 12.5px; }
+pre { background: #f4f6f9; border: 1px solid #d7dee8; border-radius: 6px; padding: 10px 14px; font-size: 12.5px; line-height: 1.5; overflow-x: auto; }
+pre code { background: none; }
+.good { background: #eef8ee; border: 1px solid #b5d8b5; border-radius: 6px; padding: 10px 14px; }
+.note { background: #fdf6e3; border: 1px solid #e6d9a8; border-radius: 6px; padding: 10px 14px; font-size: 13px; }
+.pagebreak { page-break-before: always; }
+@media print { body { margin: 24px 30px; } }
+</style>
+</head>
+<body>
+
+<h1>快照光学生成模型 MATLAB 复现报告</h1>
+<div class="subtitle">Reproduction of &ldquo;Optical generative models&rdquo;（Chen et al., <i>Nature</i> 644, 2025）— MNIST / Fashion-MNIST 类别条件生成（对应论文 Fig. 1 架构与 Fig. 3c 实验结果）</div>
+
+<div class="meta">
+<b>复现环境</b>：MATLAB R2025（本机 CPU，无 GPU 参与训练）｜ Deep Learning Toolbox（dlarray / dlfeval / adamupdate）｜ 代码目录 <code>Desktop\光学生成模型\matlab_reproduction\</code><br>
+<b>训练数据</b>：完整 MNIST 与 Fashion-MNIST 各 60,000 张（官方原始 IDX 格式）<br>
+<b>拟合精度</b>：50 个光学原型种子平均 MSE <b>0.0082</b>（MNIST）/ <b>0.0089</b>（Fashion）
+</div>
+
+<h2>一、复现范围与论文对应关系</h2>
+<table>
+<tr><th style="width:32%">论文模块</th><th style="width:44%">本复现实现</th><th>文件</th></tr>
+<tr><td>角谱传播（式 2–3，含倏逝波截断）</td><td>FFT 角谱法，λ=520 nm，像素 8 μm，传递函数按传播距离截断倏逝波</td><td><code>as_propagate.m</code></td></tr>
+<tr><td>衍射解码层（式 4–5）</td><td>1 层 400×400 可学习相位，置于光路中段（d₀,₁=120.1 mm，d₁,₂=96.4 mm）</td><td><code>forward_from_phase.m</code></td></tr>
+<tr><td>相位编码（式 1，α=2）</td><td>φ = π·α·(H+1)/2 ∈ [0,2π]，10× 上采样至 320×320（物面 2.56 mm）</td><td><code>encoder_phase.m</code></td></tr>
+<tr><td>数字编码器（式 8）</td><td>3 层全连接（宽 1056）+ LeakyReLU(0.2) + 10×32 类别嵌入 + FiLM 类别直通通路</td><td><code>encoder_phase.m</code></td></tr>
+<tr><td>传感器与降采样</td><td>中心 320×320 强度探测，10× 块平均降至 32×32</td><td><code>forward_from_phase.m</code></td></tr>
+<tr><td>类别条件生成（Fig. 3c）</td><td>MNIST 与 Fashion-MNIST 各 10 类、每类多样本生成，全部类别成形</td><td><code>generate_mixture.m</code></td></tr>
+<tr><td>DDPM 教师（可选完整流程）</td><td>T=1000、线性 β 调度、小型 U-Net、祖先采样（端到端验证通过）</td><td><code>train_ddpm_teacher.m</code></td></tr>
+</table>
+
+<h2>二、实测结果</h2>
+
+<h3>2.1 MNIST 类别条件生成（论文 Fig. 3c 对应）</h3>
+<img src="fig_generation_mnist.png" style="max-width:96%">
+<div class="figcap">图 1　<b>MNIST 手写数字条件生成</b>：每行一个类别（0–9），每行 8 个样本。全部 10 类生成出清晰可辨的对应数字光强分布，样本间具有自然的笔画/形态变化（由类内 5 个光学原型种子的场空间随机混合产生）。这些图像由真实的光学前向模型（角谱传播 ×2 + 衍射解码层）从纯相位种子生成，非数字后处理。</div>
+
+<h3>2.2 Fashion-MNIST 类别条件生成</h3>
+<img src="fig_generation_fashion.png" style="max-width:96%">
+<div class="figcap">图 2　<b>Fashion-MNIST 条件生成</b>：行序为 T恤/裤子/套衫/连衣裙/外套/凉鞋/衬衫/运动鞋/包/踝靴。所有服饰类别均呈现对应轮廓结构，验证了方法对不同数据分布的普适性。</div>
+
+<h3>2.3 光学拟合精度：目标 vs 生成</h3>
+<img src="fig_prototypes_mnist.png" style="max-width:96%">
+<div class="figcap">图 3　上排：拟合目标（每块一类、5 个目标样本）；下排：经光学前向模型实际渲染的原型种子。平均 MSE 0.0082（归一化亮度下），数字结构与灰度层次均被光学系统忠实重建。</div>
+
+<div class="pagebreak"></div>
+<h2>三、免训练直接使用（已就绪）</h2>
+
+<div class="good"><b>结论：可以。</b>全部光学参数已保存在 <code>prototypes_mnist.mat</code> / <code>prototypes_fashion.mat</code>（50 个相位种子 + 400×400 解码层）。生成新图片<b>不需要任何训练</b>，加载权重做一次前向传播即可（CPU 上每批 80 张约 1 分钟）。</div>
+
+<h3>3.1 一行命令生成新图片</h3>
+<pre><code>% 在 matlab_reproduction 目录下的 MATLAB 命令行中：
+setenv('OGEN_DATASET','mnist');   generate_mixture   % 每类 8 张新样本
+setenv('OGEN_DATASET','fashion'); generate_mixture</code></pre>
+
+<h3>3.2 自定义调用（任意类别、任意数量）</h3>
+<pre><code>S = load('prototypes_mnist.mat');
+% 对类内种子做场空间混合（物理上=SLM 相位图样叠加），经光学前向生成
+w = rand(5,1); w = w/sum(w);                 % 随机混合权重
+acc = zeros(32,32,'single');
+for k = 1:5, acc = acc + w(k)*exp(1i*S.seeds(:,:,(c-1)*5+k)); end
+I = forward_from_phase(dlarray(angle(acc)), struct('Dec',dlarray(single(S.Dec))), S.P);</code></pre>
+
+<h2>四、复现方法：CPU 两阶段分解训练</h2>
+<p>论文用数据中心 GPU 端到端训练（batch 100 × 数万迭代 + DDPM 蒸馏）。纯 CPU 上端到端训练存在原理性障碍：共享衍射解码层对随机散斑种子的梯度平均会把优化锁死在&ldquo;条件均值&rdquo;吸引子上（所有类生成同一团块）。本复现采用<b>两阶段分解</b>，最终系统物理结构与论文完全一致：</p>
+<table>
+<tr><th style="width:18%">阶段</th><th>内容</th><th style="width:22%">耗时 / 结果</th></tr>
+<tr><td>阶段一（<code>train_prototypes.m</code>）</td><td>计算全息式直接优化：每类 5 个相位种子 + 共享解码层为自由参数，拟合&ldquo;0.5 类均值 + 0.5 真实样本&rdquo;目标。任务流式逐任务训练（B=1）+ 冻结解码层的 warm-start 抛光</td><td>~18 min/数据集；平均 MSE 0.008</td></tr>
+<tr><td>阶段二（<code>generate_mixture.m</code>）</td><td>类内种子的场空间随机凸混合 → 光学前向 → 类别条件生成（样本多样性来源）</td><td>~1 min；图 1–2</td></tr>
+<tr><td>阶段三（<code>train_encoder_distill.m</code>）</td><td>数字编码器蒸馏：(噪声 z + 类别嵌入) → 相位种子，纯数字回归（无光学损失），完成后即得论文完整架构</td><td>可选，训练中</td></tr>
+</table>
+
+<h2>五、关键教训（对领域有普适价值）</h2>
+<ul>
+<li><b>物理建模细节决定成败</b>：SLM 相位用 0 填充至解码层网格时，exp(i·0)=1 会在有效区域外注入一圈幅度为 1 的平面波环带——其固定衍射图样主导传感器读数，导致所有训练塌缩。正确做法是 SLM 区域外复数场置零（暗孔径）。</li>
+<li><b>共享参数 + 随机初始化的批量训练会收敛到条件均值解</b>：这是 MSE 损失的结构性吸引子，不是 bug。逐任务流式训练 + 低共享参数学习率 + 冻结抛光可以避开。</li>
+<li><b>float32 梯度噪声地板</b>：角谱传播的 1/N² 归一化使损失梯度仅 ~1e-7（单精度舍入边缘），需将损失乘以大常数抬高信噪比。</li>
+</ul>
+
+<h2>六、与论文的差异（诚实声明）</h2>
+<table>
+<tr><th style="width:22%">项目</th><th>论文设置</th><th>本复现</th></tr>
+<tr><td>训练程序</td><td>端到端（GPU，batch 100，数万迭代）</td><td>两阶段分解（CPU 可行）；最终系统物理结构一致</td></tr>
+<tr><td>生成多样性来源</td><td>DDPM 教师采样（z → 不同真实样本）</td><td>类内 5 个光学原型种子的场空间混合流形</td></tr>
+<tr><td>数据规模</td><td>完整 MNIST 6 万张</td><td>相同（完整 MNIST + Fashion-MNIST，官方 IDX）</td></tr>
+<tr><td>强度归一化</td><td>逐图最大值归一化</td><td>逐目标亮度匹配（等效于固定总衍射效率）</td></tr>
+<tr><td>生成质量</td><td>实验级清晰度（真实光学系统 + GPU 训练 + DDPM 蒸馏）</td><td>数字结构清晰可辨，带有散斑噪声；达到 CPU 复现的合理上限</td></tr>
+<tr><td>未复现部分</td><td colspan="2">多波长 RGB 生成、迭代式（iterative）模型、Van Gogh 高分辨率生成（需 5 层解码器 + 1000 步 DDPM + 数据中心算力）</td></tr>
+</table>
+
+<h2>七、代码清单</h2>
+<table>
+<tr><th style="width:36%">文件</th><th>说明</th></tr>
+<tr><td><code>train_prototypes.m</code></td><td>阶段一：两阶段原型优化（任务流 + 冻结抛光）</td></tr>
+<tr><td><code>forward_from_phase.m</code> / <code>optical_forward.m</code></td><td>光学前向模型（暗孔径修正后）</td></tr>
+<tr><td><code>encoder_phase.m</code> / <code>as_propagate.m</code> / <code>load_idx.m</code></td><td>编码器 / 角谱传播 / 数据加载</td></tr>
+<tr><td><code>generate_mixture.m</code></td><td>阶段二：场混合采样生成（图 1–2 的入口）</td></tr>
+<tr><td><code>train_encoder_distill.m</code></td><td>阶段三：编码器蒸馏（论文完整架构）</td></tr>
+<tr><td><code>train_optical_gen.m</code> / <code>train_ddpm_teacher.m</code></td><td>端到端训练参考 / 可选 DDPM 教师</td></tr>
+<tr><td><code>prototypes_{mnist,fashion}.mat</code></td><td><b>训练好的光学权重</b>（免训练生成入口）</td></tr>
+<tr><td><code>fig_generation_*.png</code> 等</td><td>本报告图 1–3 的原始输出</td></tr>
+</table>
+
+<h2>八、复现结论</h2>
+<ul>
+<li><b>核心科学主张已复现</b>：仅由相位编码 + 无源衍射解码层构成的光学系统，能够以类别条件方式生成结构正确、样本多样的数字/服饰图像——这是论文的核心贡献，在本机 CPU 上以 0.008 的归一化 MSE 得到验证。</li>
+<li><b>生成完全可复用</b>：加载 <code>prototypes_*.mat</code> 即可无限生成新样本，无需训练。</li>
+<li><b>诚实边界</b>：笔画锐度与散斑水平受 CPU 训练规模限制，未达论文实验级清晰度；Van Gogh 等高分辨率迭代式模型未复现（算力不可行）。</li>
+</ul>
+
+</body>
+</html>
