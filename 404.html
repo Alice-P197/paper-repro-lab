@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>文献档案馆 · 已迁至新地址</title>
+<link rel="canonical" href="https://alice-p197.github.io/literature-archive/">
+<style>
+  :root{--ink:#16181a;--ink2:#4a4f54;--muted:#8a8f94;--teal:#1f4e5f;--ochre:#b08d57;--paper:#fbfaf7;--line:#e4e1da}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:"Source Han Serif SC","Noto Serif SC",Georgia,"Songti SC",serif;
+    display:grid;place-items:center;padding:32px;
+    background-image:
+      linear-gradient(to right,rgba(22,24,26,.028) 1px,transparent 1px),
+      linear-gradient(to bottom,rgba(22,24,26,.028) 1px,transparent 1px);
+    background-size:44px 44px;
+  }
+  .box{max-width:520px;width:100%;background:#fff;border:1px solid var(--line);
+       border-radius:4px;padding:44px 40px 38px;position:relative;
+       box-shadow:0 18px 44px -28px rgba(22,24,26,.35)}
+  .seal{position:absolute;top:20px;right:20px;width:56px;height:56px;border:2px solid var(--ochre);
+        border-radius:3px;display:grid;grid-template-columns:1fr 1fr;place-items:center;
+        color:var(--ochre);font-size:15px;line-height:1;font-weight:700;transform:rotate(-4deg);
+        outline:1px solid rgba(176,141,87,.45);outline-offset:-5px}
+  .eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;
+           letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+  h1{font-size:26px;line-height:1.42;margin:0 0 14px;letter-spacing:-.01em}
+  p{font-size:14.5px;line-height:1.85;color:var(--ink2);margin:0 0 10px}
+  .url{display:block;margin:18px 0 22px;padding:12px 14px;background:#f4f7f8;border-left:3px solid var(--teal);
+       border-radius:0 4px 4px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+       font-size:12.5px;color:var(--teal);word-break:break-all}
+  a.go{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;
+       font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;letter-spacing:.06em;
+       padding:11px 22px;border-radius:3px}
+  a.go:hover{background:#173d4a}
+  .hint{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.7}
+</style>
+<script>
+(function(){
+  var BASE_OLD = "/paper-repro-lab";
+  var BASE_NEW = "https://alice-p197.github.io/literature-archive";
+  var p = location.pathname || "/";
+  if (p.indexOf(BASE_OLD) === 0) p = p.slice(BASE_OLD.length);
+  if (p === "" ) p = "/";
+  if (p.charAt(0) !== "/") p = "/" + p;
+  var target = BASE_NEW + p + location.search + location.hash;
+  window.__TARGET__ = target;
+  var el = document.getElementById("target-url");
+  if (el) el.textContent = target;
+  var a = document.getElementById("go");
+  if (a) a.href = target;
+  location.replace(target);
+})();
+</script>
+</head>
+<body>
+  <div class="box">
+    <div class="seal"><span>文</span><span>献</span><span>档</span><span>案</span></div>
+    <div class="eyebrow">Moved Permanently</div>
+    <h1>这个地址已迁至<br>「文献档案馆」</h1>
+    <p>旧站 <em>论文复现实验室</em> 已改名并整体迁移，你访问的这一页正在自动跳转。</p>
+    <code class="url" id="target-url">https://alice-p197.github.io/literature-archive/</code>
+    <a class="go" id="go" href="https://alice-p197.github.io/literature-archive/">前往新站 →</a>
+    <div class="hint">若没有自动跳转，请点击上方按钮；旧链接的深色书签请一并更新。</div>
+  </div>
+  <noscript>
+    <div class="box" style="margin-top:0">
+      <h1>请手动访问新地址</h1>
+      <a class="go" href="https://alice-p197.github.io/literature-archive/">https://alice-p197.github.io/literature-archive/</a>
+    </div>
+  </noscript>
+</body>
+</html>
